@@ -458,10 +458,13 @@ footer a:hover{color:var(--on)}
   Powered by <a href="https://onnxruntime.ai" target="_blank">ONNX Runtime Web</a> &nbsp;·&nbsp; YOLO11n &nbsp;·&nbsp; Berjalan sepenuhnya di browser
 </footer>
 
-<script type="module">
-import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/esm/ort.min.js';
 
-const MODEL_URL   = './model/best.onnx';
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/ort.min.js"></script>
+<script type="module">
+const ort = window.ort;
+
+const MODEL_URL = './model/best.onnx';
+// ... sisa kode sama persis
 const INPUT_SIZE  = 640;
 const CONF        = 0.25;
 const IOU         = 0.45;
