@@ -459,7 +459,7 @@ footer a:hover{color:var(--on)}
 </footer>
 
 <script type="module">
-import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/esm/ort.min.js';
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/esm/ort.min.js';
 
 const MODEL_URL   = './model/best.onnx';
 const INPUT_SIZE  = 640;
@@ -502,7 +502,7 @@ async function loadModel(){
     prog.style.display='block';
     let p=0;
     const t=setInterval(()=>{p=Math.min(p+Math.random()*8,88);progFill.style.width=p+'%'},220);
-    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
+    ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';
     for(const ep of ['webgl','wasm']){
       try{
         session=await ort.InferenceSession.create(MODEL_URL,{
