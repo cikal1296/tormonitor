@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Monitor Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Bricolage+Grotesque:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --bg1:#111118;
+  --bg2:#18181f;
+  --bg3:#1e1e28;
+  --bd:#2a2a38;
+  --bd2:#363648;
+  --tx:#eeeef5;
+  --mu:#7070a0;
+  --di:#3a3a55;
+  --on:#00e87a;
+  --off:#ff4455;
+  --obj:#f5a623;
+  --acc:#5c6fff;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Bricolage Grotesque',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--tx);
+  font-family:var(--sans);min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* SCANLINE OVERLAY */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px);
+}
+
+/* HEADER */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 36px;border-bottom:1px solid var(--bd);
+  position:sticky;top:0;background:rgba(10,10,15,.92);
+  backdrop-filter:blur(20px);z-index:100;
+}
+.logo{
+  display:flex;align-items:center;gap:12px;
+  font-family:var(--mono);font-weight:600;font-size:.88rem;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.logo-mark{
+  width:32px;height:32px;border:1.5px solid var(--on);
+  border-radius:6px;display:flex;align-items:center;justify-content:center;
+  position:relative;flex-shrink:0;
+}
+.logo-mark::before{
+  content:'';width:8px;height:8px;background:var(--on);
+  border-radius:50%;box-shadow:0 0 12px var(--on);
+}
+.logo-mark::after{
+  content:'';position:absolute;inset:4px;border:1px solid var(--on);
+  border-radius:3px;opacity:.4;
+}
+.logo span{color:var(--mu)}
+
+.status-chip{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 14px;border:1px solid var(--bd2);border-radius:100px;
+  font-family:var(--mono);font-size:.68rem;color:var(--mu);
+  background:var(--bg2);transition:all .4s;
+}
+.status-chip.ready{border-color:var(--on);color:var(--on)}
+.status-chip.error{border-color:var(--off);color:var(--off)}
+.chip-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:currentColor;animation:pulse 2s infinite;
+}
+.status-chip.error .chip-dot{animation:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+/* LAYOUT */
+main{
+  max-width:1020px;margin:0 auto;
+  padding:56px 24px 80px;
+  display:grid;grid-template-columns:1fr;gap:40px;
+}
+
+/* HERO */
+.hero{text-align:center;padding:0 20px}
+.tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--acc);
+  border:1px solid rgba(92,111,255,.3);
+  padding:5px 16px;border-radius:3px;margin-bottom:32px;
+  background:rgba(92,111,255,.06);
+}
+.tag-dot{width:4px;height:4px;border-radius:50%;background:var(--acc);animation:pulse 1.8s infinite}
+h1{
+  font-size:clamp(3rem,8vw,5.5rem);font-weight:800;
+  line-height:.95;letter-spacing:-.04em;margin-bottom:24px;
+}
+h1 .line1{display:block;color:var(--tx)}
+h1 .line2{
+  display:block;
+  -webkit-text-stroke:1px var(--on);
+  color:transparent;
+  font-style:italic;
+}
+.hero-sub{
+  font-family:var(--mono);font-size:.8rem;
+  color:var(--mu);line-height:1.9;max-width:440px;margin:0 auto;
+}
+
+/* PROGRESS BAR */
+.prog-track{
+  width:200px;height:2px;background:var(--bd);
+  border-radius:2px;overflow:hidden;
+  margin:20px auto 0;display:none;
+}
+.prog-fill{height:100%;width:0%;background:var(--on);transition:width .25s}
+
+/* CONTROLS */
+.ctrl-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 24px;border-radius:8px;
+  border:1px solid var(--bd2);
+  font-family:var(--mono);font-size:.72rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.07em;
+  cursor:pointer;background:var(--bg2);color:var(--tx);
+  transition:all .18s;white-space:nowrap;
+  -webkit-appearance:none;
+}
+.btn:hover{transform:translateY(-2px);border-color:var(--bd)}
+.btn:active{transform:none}
+.btn:disabled{opacity:.3;pointer-events:none;cursor:not-allowed}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+
+.btn-primary{
+  border-color:var(--on);color:var(--on);
+  background:rgba(0,232,122,.06);
+}
+.btn-primary:hover{
+  background:var(--on);color:#000;
+  box-shadow:0 0 28px rgba(0,232,122,.3);
+}
+.btn-danger{border-color:var(--off);color:var(--off);background:rgba(255,68,85,.06)}
+.btn-danger:hover{background:var(--off);color:#fff}
+.btn-blue{border-color:var(--acc);color:var(--acc);background:rgba(92,111,255,.06)}
+.btn-blue:hover{background:var(--acc);color:#fff}
+
+/* VIEWPORT */
+.viewport{
+  position:relative;border:1px solid var(--bd);border-radius:16px;
+  overflow:hidden;background:var(--bg1);min-height:400px;
+  display:flex;align-items:center;justify-content:center;
+  transition:border-color .3s;
+}
+.viewport.drag-over{
+  border-color:var(--on);
+  box-shadow:inset 0 0 0 1px var(--on),0 0 40px rgba(0,232,122,.12);
+}
+.viewport.live{border-color:var(--bd2)}
+
+/* Corner decorations */
+.viewport::before,.viewport::after{
+  content:'';position:absolute;width:20px;height:20px;
+  border-color:var(--on);border-style:solid;opacity:.5;
+  z-index:2;pointer-events:none;transition:opacity .3s;
+}
+.viewport::before{top:12px;left:12px;border-width:2px 0 0 2px;border-radius:3px 0 0 0}
+.viewport::after{bottom:12px;right:12px;border-width:0 2px 2px 0;border-radius:0 0 3px 0}
+
+/* EMPTY STATE */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;padding:70px 40px;text-align:center;
+}
+.es-icon{
+  width:88px;height:88px;border:1.5px dashed var(--di);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  animation:rot 18s linear infinite;
+}
+.es-icon svg{width:32px;height:32px;stroke:var(--mu);fill:none;stroke-width:1.5;animation:rot-rev 18s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+@keyframes rot-rev{to{transform:rotate(-360deg)}}
+.es-label{font-family:var(--mono);font-size:.78rem;color:var(--mu)}
+.es-hint{font-family:var(--mono);font-size:.65rem;color:var(--di)}
+
+/* MEDIA ELEMENTS */
+#videoEl,#outCanvas{
+  width:100%;height:auto;max-height:560px;
+  object-fit:contain;display:none;
+}
+#ovrCanvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;z-index:10;
+}
+
+/* LOADING OVERLAY */
+.load-overlay{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;
+  background:rgba(10,10,15,.85);backdrop-filter:blur(8px);
+  z-index:20;
+}
+.spinner{
+  width:40px;height:40px;
+  border:1.5px solid var(--bd2);
+  border-top-color:var(--on);border-right-color:var(--on);
+  border-radius:50%;animation:spin .6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-label{font-family:var(--mono);font-size:.7rem;color:var(--mu)}
+
+/* CAM CONTROLS */
+.cam-controls{display:none;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* RESULTS */
+.results{
+  background:var(--bg1);border:1px solid var(--bd);
+  border-radius:16px;padding:24px 28px;
+  display:none;animation:rise .2s ease;
+}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.results-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.results-title{
+  font-family:var(--mono);font-size:.6rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--mu);
+}
+.inference-time{
+  font-family:var(--mono);font-size:.65rem;color:var(--di);
+}
+
+.det-list{display:flex;flex-direction:column;gap:8px}
+.det-item{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border:1px solid var(--bd);
+  border-radius:10px;background:var(--bg2);
+  animation:slide .18s ease;
+}
+@keyframes slide{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.det-indicator{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  box-shadow:0 0 8px currentColor;
+}
+.det-indicator.menyala{background:var(--on);color:var(--on)}
+.det-indicator.mati{background:var(--off);color:var(--off)}
+.det-indicator.objects{background:var(--obj);color:var(--obj)}
+.det-label{
+  font-weight:700;font-size:.95rem;
+  text-transform:uppercase;letter-spacing:.04em;flex:1;
+}
+.det-label.menyala{color:var(--on)}
+.det-label.mati{color:var(--off)}
+.det-label.objects{color:var(--obj)}
+.det-conf{font-family:var(--mono);font-size:.68rem;color:var(--mu)}
+.det-bar-wrap{width:80px}
+.det-bar-bg{height:2px;background:var(--bd);border-radius:2px;overflow:hidden}
+.det-bar{height:100%;border-radius:2px;transition:width .3s}
+.det-bar.menyala{background:var(--on)}
+.det-bar.mati{background:var(--off)}
+.det-bar.objects{background:var(--obj)}
+
+.no-det{
+  font-family:var(--mono);font-size:.78rem;
+  color:var(--di);text-align:center;padding:24px;
+}
+
+/* STATS GRID */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--bd);border:1px solid var(--bd);
+  border-radius:12px;overflow:hidden;
+  display:none;
+}
+.stat{background:var(--bg2);padding:16px 18px}
+.stat-label{
+  font-family:var(--mono);font-size:.58rem;
+  letter-spacing:.15em;text-transform:uppercase;
+  color:var(--di);margin-bottom:6px;
+}
+.stat-val{
+  font-family:var(--mono);font-size:.9rem;
+  font-weight:600;color:var(--on);
+}
+
+/* FEATURE CARDS */
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.feature-card{
+  padding:24px;border:1px solid var(--bd);border-radius:12px;
+  background:var(--bg1);position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s;
+}
+.feature-card:hover{border-color:var(--bd2);transform:translateY(-2px)}
+.feature-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--bd2),transparent);
+}
+.fc-num{
+  font-family:var(--mono);font-size:.6rem;color:var(--di);
+  letter-spacing:.1em;margin-bottom:14px;display:block;
+}
+.fc-title{font-weight:700;font-size:.95rem;margin-bottom:8px}
+.fc-desc{font-family:var(--mono);font-size:.7rem;color:var(--mu);line-height:1.7}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;right:24px;
+  padding:11px 20px;border-radius:9px;
+  background:var(--bg3);border:1px solid var(--bd2);
+  font-family:var(--mono);font-size:.7rem;color:var(--tx);
+  z-index:99999;animation:toast-in .25s ease;
+  max-width:280px;line-height:1.5;
+  box-shadow:0 8px 40px rgba(0,0,0,.6);
+}
+.toast.ok{border-color:var(--on);color:var(--on)}
+.toast.err{border-color:var(--off);color:var(--off)}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* FOOTER */
+footer{
+  border-top:1px solid var(--bd);padding:20px 36px;
+  text-align:center;font-family:var(--mono);
+  font-size:.65rem;color:var(--di);
+}
+footer a{color:var(--mu);text-decoration:none}
+footer a:hover{color:var(--on)}
+
+@media(max-width:640px){
+  header{padding:12px 18px}
+  main{padding:36px 16px 60px;gap:28px}
+  h1{font-size:2.6rem}
+  .feature-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .logo span{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark"></div>
+    <span>Monitor</span>AI
+  </div>
+  <div class="status-chip" id="statusChip">
+    <span class="chip-dot"></span>
+    <span id="statusTxt">Memuat model...</span>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="tag"><span class="tag-dot"></span>YOLO11n &nbsp;·&nbsp; ONNX Runtime &nbsp;·&nbsp; Real-time</div>
+    <h1>
+      <span class="line1">Deteksi Monitor</span>
+      <span class="line2">Nyala / Mati</span>
+    </h1>
+    <p class="hero-sub">AI berjalan langsung di browser — tanpa server, tanpa upload data. Privat 100%.</p>
+    <div class="prog-track" id="progTrack">
+      <div class="prog-fill" id="progFill"></div>
+    </div>
+  </section>
+
+  <div class="ctrl-row" id="mainCtrl">
+    <button class="btn btn-primary" id="btnCam" disabled>
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Buka Kamera
+    </button>
+    <button class="btn" id="btnUp" disabled>
+      <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      Upload Gambar
+    </button>
+    <input type="file" id="fileIn" accept="image/*" style="display:none">
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="empty-state" id="emptyState">
+      <div class="es-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <p class="es-label">Belum ada gambar</p>
+      <small class="es-hint">Upload · Kamera · Drag &amp; drop · Ctrl+V</small>
+    </div>
+    <video id="videoEl" autoplay playsinline muted></video>
+    <canvas id="outCanvas"></canvas>
+    <canvas id="ovrCanvas"></canvas>
+  </div>
+
+  <div class="cam-controls" id="camControls">
+    <button class="btn btn-danger" id="btnStop">
+      <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></svg>
+      Stop Kamera
+    </button>
+    <button class="btn btn-blue" id="btnSnap">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      Snapshot
+    </button>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-header">
+      <span class="results-title">// Hasil Deteksi</span>
+      <span class="inference-time" id="inferTime"></span>
+    </div>
+    <div class="det-list" id="detList"></div>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat">
+      <div class="stat-label">Inferensi</div>
+      <div class="stat-val" id="stInf">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Objek</div>
+      <div class="stat-val" id="stObj">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Model</div>
+      <div class="stat-val">YOLO11n</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Backend</div>
+      <div class="stat-val" id="stBe">—</div>
+    </div>
+  </div>
+
+  <section class="feature-grid">
+    <div class="feature-card">
+      <span class="fc-num">01</span>
+      <div class="fc-title">100% Privat</div>
+      <p class="fc-desc">Semua inferensi berjalan di browser. Tidak ada data yang meninggalkan perangkat kamu.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-num">02</span>
+      <div class="fc-title">Real-time</div>
+      <p class="fc-desc">Deteksi langsung dari stream kamera dalam puluhan milidetik menggunakan WebGL atau WASM.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-num">03</span>
+      <div class="fc-title">3 Kelas</div>
+      <p class="fc-desc">Model mendeteksi monitor <b style="color:var(--on)">menyala</b>, <b style="color:var(--off)">mati</b>, dan <b style="color:var(--obj)">objek</b> lain dengan confidence score.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Powered by <a href="https://onnxruntime.ai" target="_blank">ONNX Runtime Web</a> &nbsp;·&nbsp; YOLO11n &nbsp;·&nbsp; Berjalan sepenuhnya di browser
+</footer>
+
+<script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/esm/ort.min.js';
+
+const MODEL_URL   = './model/best.onnx';
+const INPUT_SIZE  = 640;
+const CONF        = 0.25;
+const IOU         = 0.45;
+const CLASSES     = ['mati','menyala','objects'];
+
+const $  = id => document.getElementById(id);
+const chip      = $('statusChip');
+const chipTxt   = $('statusTxt');
+const btnCam    = $('btnCam');
+const btnUp     = $('btnUp');
+const fileIn    = $('fileIn');
+const camCtrl   = $('camControls');
+const btnStop   = $('btnStop');
+const btnSnap   = $('btnSnap');
+const video     = $('videoEl');
+const outC      = $('outCanvas');
+const ovrC      = $('ovrCanvas');
+const vp        = $('viewport');
+const empty     = $('emptyState');
+const results   = $('results');
+const detList   = $('detList');
+const statsGrid = $('statsGrid');
+const stInf     = $('stInf');
+const stObj     = $('stObj');
+const stBe      = $('stBe');
+const inferTime = $('inferTime');
+const prog      = $('progTrack');
+const progFill  = $('progFill');
+const ctx       = outC.getContext('2d');
+const octx      = ovrC.getContext('2d');
+
+let session=null, stream=null, rafId=null, be='WASM';
+
+/* ── LOAD MODEL ── */
+async function loadModel(){
+  try{
+    setStatus('Memuat model...','');
+    prog.style.display='block';
+    let p=0;
+    const t=setInterval(()=>{p=Math.min(p+Math.random()*8,88);progFill.style.width=p+'%'},220);
+    ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
+    for(const ep of ['webgl','wasm']){
+      try{
+        session=await ort.InferenceSession.create(MODEL_URL,{
+          executionProviders:[ep],
+          graphOptimizationLevel:'all'
+        });
+        be=ep.toUpperCase();break;
+      }catch{session=null;}
+    }
+    clearInterval(t);
+    progFill.style.width='100%';
+    setTimeout(()=>{prog.style.display='none'},400);
+    if(!session)throw new Error('Semua backend gagal');
+    setStatus('Model siap','ready');
+    stBe.textContent=be;
+    btnCam.disabled=false;
+    btnUp.disabled=false;
+    toast('Model berhasil dimuat','ok');
+  }catch(e){
+    setStatus('Gagal memuat','error');
+    toast('Error: '+e.message,'err');
+  }
+}
+
+/* ── PREPROCESS ── */
+function preprocess(src){
+  const off=Object.assign(document.createElement('canvas'),{width:INPUT_SIZE,height:INPUT_SIZE});
+  off.getContext('2d').drawImage(src,0,0,INPUT_SIZE,INPUT_SIZE);
+  const px=off.getContext('2d').getImageData(0,0,INPUT_SIZE,INPUT_SIZE).data;
+  const n=INPUT_SIZE*INPUT_SIZE,f=new Float32Array(3*n);
+  for(let i=0;i<n;i++){f[i]=px[i*4]/255;f[n+i]=px[i*4+1]/255;f[2*n+i]=px[i*4+2]/255;}
+  return f;
+}
+
+/* ── INFER ── */
+async function infer(src){
+  if(!session)return null;
+  const t0=performance.now();
+  const inp=new ort.Tensor('float32',preprocess(src),[1,3,INPUT_SIZE,INPUT_SIZE]);
+  const out=(await session.run({images:inp}))['output0'].data;
+  const ms=performance.now()-t0;
+  const N=8400,C=CLASSES.length,dets=[];
+  for(let i=0;i<N;i++){
+    let best=-Infinity,cls=0;
+    for(let c=0;c<C;c++){const s=out[(4+c)*N+i];if(s>best){best=s;cls=c;}}
+    if(best<CONF)continue;
+    const cx=out[i],cy=out[N+i],w=out[2*N+i],h=out[3*N+i];
+    dets.push({
+      x1:(cx-w/2)/INPUT_SIZE,y1:(cy-h/2)/INPUT_SIZE,
+      x2:(cx+w/2)/INPUT_SIZE,y2:(cy+h/2)/INPUT_SIZE,
+      conf:best,cls,label:CLASSES[cls]
+    });
+  }
+  return{dets:nms(dets),ms};
+}
+
+function nms(dets){
+  dets.sort((a,b)=>b.conf-a.conf);
+  const keep=[],used=new Set();
+  for(let i=0;i<dets.length;i++){
+    if(used.has(i))continue;
+    keep.push(dets[i]);
+    for(let j=i+1;j<dets.length;j++){
+      if(!used.has(j)&&iou(dets[i],dets[j])>IOU)used.add(j);
+    }
+  }
+  return keep;
+}
+function iou(a,b){
+  const ix1=Math.max(a.x1,b.x1),iy1=Math.max(a.y1,b.y1);
+  const ix2=Math.min(a.x2,b.x2),iy2=Math.min(a.y2,b.y2);
+  const inter=Math.max(0,ix2-ix1)*Math.max(0,iy2-iy1);
+  return inter/((a.x2-a.x1)*(a.y2-a.y1)+(b.x2-b.x1)*(b.y2-b.y1)-inter);
+}
+
+/* ── DRAW BOXES ── */
+const COLORS={menyala:'#00e87a',mati:'#ff4455',objects:'#f5a623'};
+function draw(W,H,dets){
+  ovrC.width=W;ovrC.height=H;octx.clearRect(0,0,W,H);
+  for(const d of dets){
+    const x=d.x1*W,y=d.y1*H,w=(d.x2-d.x1)*W,h=(d.y2-d.y1)*H;
+    const col=COLORS[d.label]||'#fff';
+    const pct=(d.conf*100).toFixed(1);
+    octx.strokeStyle=col;octx.lineWidth=1.5;
+    octx.strokeRect(x,y,w,h);
+    octx.fillStyle=col+'18';octx.fillRect(x,y,w,h);
+    const cs=12;octx.lineWidth=2.5;octx.strokeStyle=col;
+    [[x,y+cs,x,y,x+cs,y],[x+w-cs,y,x+w,y,x+w,y+cs],
+     [x,y+h-cs,x,y+h,x+cs,y+h],[x+w-cs,y+h,x+w,y+h,x+w,y+h-cs]]
+    .forEach(([ax,ay,bx,by,cx2,cy])=>{
+      octx.beginPath();octx.moveTo(ax,ay);octx.lineTo(bx,by);octx.lineTo(cx2,cy);octx.stroke();
+    });
+    const lbl=d.label.toUpperCase()+' '+pct+'%';
+    octx.font='bold 11px IBM Plex Mono,monospace';
+    const tw=octx.measureText(lbl).width+10;
+    const ly=y>22?y-22:y+h;
+    octx.fillStyle=col;
+    octx.beginPath();octx.roundRect(x,ly,tw,18,3);octx.fill();
+    octx.fillStyle='#000';octx.fillText(lbl,x+5,ly+13);
+  }
+}
+
+/* ── RESULTS UI ── */
+function showResults(dets,ms){
+  results.style.display='block';
+  statsGrid.style.display='grid';
+  stInf.textContent=ms.toFixed(1)+' ms';
+  stObj.textContent=dets.length;
+  inferTime.textContent=ms.toFixed(0)+'ms';
+  if(!dets.length){
+    detList.innerHTML='<div class="no-det">Tidak ada objek terdeteksi</div>';
+    return;
+  }
+  detList.innerHTML=dets.map(d=>{
+    const p=(d.conf*100).toFixed(1);
+    return`<div class="det-item">
+      <div class="det-indicator ${d.label}"></div>
+      <div class="det-label ${d.label}">${d.label.toUpperCase()}</div>
+      <span class="det-conf">${p}%</span>
+      <div class="det-bar-wrap">
+        <div class="det-bar-bg">
+          <div class="det-bar ${d.label}" style="width:${p}%"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── IMAGE FLOW ── */
+async function processImg(url){
+  empty.style.display='none';vp.classList.add('live');
+  const ld=document.createElement('div');ld.className='load-overlay';
+  ld.innerHTML='<div class="spinner"></div><div class="load-label">Mendeteksi...</div>';
+  vp.appendChild(ld);
+  const img=new Image();
+  await new Promise(r=>{img.onload=r;img.src=url;});
+  outC.style.display='block';
+  outC.width=img.naturalWidth||img.width;
+  outC.height=img.naturalHeight||img.height;
+  ctx.drawImage(img,0,0);
+  const res=await infer(outC);
+  ld.remove();
+  if(res){draw(outC.width,outC.height,res.dets);showResults(res.dets,res.ms);}
+}
+
+/* ── CAMERA ── */
+async function startCam(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:1280,height:720},audio:false});
+    video.srcObject=stream;video.style.display='block';
+    outC.style.display='none';empty.style.display='none';
+    camCtrl.style.display='flex';btnCam.style.display='none';
+    btnUp.disabled=true;vp.classList.add('live');
+    await video.play();liveLoop();
+    toast('Kamera aktif','ok');
+  }catch(e){
+    toast('Gagal akses kamera: '+e.message,'err');
+  }
+}
+function stopCam(){
+  cancelAnimationFrame(rafId);
+  stream?.getTracks().forEach(t=>t.stop());stream=null;
+  video.style.display='none';outC.style.display='none';
+  ovrC.width=0;camCtrl.style.display='none';
+  btnCam.style.display='';btnUp.disabled=false;
+  vp.classList.remove('live');empty.style.display='flex';
+  results.style.display='none';statsGrid.style.display='none';
+}
+let lastTs=0;
+function liveLoop(){
+  rafId=requestAnimationFrame(async ts=>{
+    if(ts-lastTs>120){
+      lastTs=ts;
+      if(video.readyState>=2){
+        const tmp=Object.assign(document.createElement('canvas'),{
+          width:video.videoWidth||640,height:video.videoHeight||480
+        });
+        tmp.getContext('2d').drawImage(video,0,0);
+        const vr=video.getBoundingClientRect();
+        ovrC.style.width=vr.width+'px';ovrC.style.height=vr.height+'px';
+        const res=await infer(tmp);
+        if(res){draw(tmp.width,tmp.height,res.dets);showResults(res.dets,res.ms);}
+      }
+    }
+    if(stream)liveLoop();
+  });
+}
+function snapshot(){
+  const tmp=Object.assign(document.createElement('canvas'),{
+    width:video.videoWidth||640,height:video.videoHeight||480
+  });
+  const tc=tmp.getContext('2d');
+  tc.drawImage(video,0,0);tc.drawImage(ovrC,0,0,tmp.width,tmp.height);
+  const a=document.createElement('a');
+  a.download='monitor-snap-'+Date.now()+'.png';
+  a.href=tmp.toDataURL();a.click();
+  toast('Snapshot disimpan','ok');
+}
+
+/* ── HELPERS ── */
+function setStatus(txt,cls){
+  chipTxt.textContent=txt;
+  chip.className='status-chip'+(cls?' '+cls:'');
+}
+function toast(msg,type=''){
+  document.querySelector('.toast')?.remove();
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.transition='opacity .35s';t.style.opacity='0';},2600);
+  setTimeout(()=>t.remove(),3100);
+}
+
+/* ── EVENTS ── */
+btnCam.onclick=startCam;
+btnStop.onclick=stopCam;
+btnSnap.onclick=snapshot;
+btnUp.onclick=()=>fileIn.click();
+fileIn.onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  processImg(URL.createObjectURL(f));fileIn.value='';
+};
+vp.addEventListener('dragover',e=>{e.preventDefault();vp.classList.add('drag-over');});
+vp.addEventListener('dragleave',()=>vp.classList.remove('drag-over'));
+vp.addEventListener('drop',e=>{
+  e.preventDefault();vp.classList.remove('drag-over');
+  const f=e.dataTransfer?.files?.[0];
+  if(f&&f.type.startsWith('image/'))processImg(URL.createObjectURL(f));
+});
+document.addEventListener('paste',e=>{
+  const f=[...e.clipboardData.items].find(i=>i.type.startsWith('image/'));
+  if(f)processImg(URL.createObjectURL(f.getAsFile()));
+});
+
+loadModel();
+</script>
+</body>
+</html>
